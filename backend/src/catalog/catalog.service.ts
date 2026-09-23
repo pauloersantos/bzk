@@ -1,0 +1,14 @@
+import { ConflictException, Injectable } from '@nestjs/common';
+import { DatabaseError } from 'pg';
+import { DatabaseService, TransactionContext } from '../database/database.service';
+import { CreateStageDto } from './dto/create-stage.dto';
+import { CreateServiceDto } from './dto/create-service.dto';
+
+@Injectable()
+export class CatalogService {
+  constructor(private readonly database: DatabaseService) {}
+  listStages(context: TransactionContext) { return this.database.withContext(context, async (client) => (await this.database.query(client, `select id, code, name, description, parent_stage_id as "parentStageId", display_order as "displayOrder", status, version from app.stage_catalog where organization_id=$1 order by display_order, name`, [context.organizationId])).rows); }
+  async createStage(context: TransactionContext, input: CreateStageDto) { try { return await this.database.withContext(context, async (client) => (await this.database.query(client, `insert into app.stage_catalog(organization_id,code,name,description,parent_stage_id,display_order,created_by,updated_by) values($1,$2,$3,$4,$5,$6,$7,$7) returning id,code,name,description,parent_stage_id as "parentStageId",display_order as "displayOrder",status,version`, [context.organizationId,input.code,input.name,input.description??null,input.parentStageId??null,input.displayOrder,context.userId])).rows[0]); } catch(error){ if(error instanceof DatabaseError && error.code==='23505') throw new ConflictException('Código de etapa já cadastrado'); throw error; } }
+  listServices(context: TransactionContext) { return this.database.withContext(context, async (client) => (await this.database.query(client, `select id,stage_id as "stageId",code,name,description,unit_code as "unitCode",cost_category_code as "costCategoryCode",default_weight as "defaultWeight",default_duration_days as "defaultDurationDays",progress_criterion as "progressCriterion",status,version from app.service_catalog where organization_id=$1 order by name`, [context.organizationId])).rows); }
+  createService(context: TransactionContext, input: CreateServiceDto) { return this.database.withContext(context, async (client) => this.database.query(client, `insert into app.service_catalog(organization_id,stage_id,code,name,description,unit_code,cost_category_code,default_weight,default_duration_days,progress_criterion,created_by,updated_by) values($1,$2,$3,$4,$5,$6,$7,$8::numeric,$9,$10,$11,$11) returning id,stage_id as "stageId",code,name,description,unit_code as "unitCode",cost_category_code as "costCategoryCode",default_weight as "defaultWeight",default_duration_days as "defaultDurationDays",progress_criterion as "progressCriterion",status,version`, [context.organizationId,input.stageId,input.code,input.name,input.description??null,input.unitCode,input.costCategoryCode,input.defaultWeight,input.defaultDurationDays,input.progressCriterion,context.userId]).then(r=>r.rows[0])); }
+}
