@@ -7,7 +7,7 @@ Sistema web responsivo para acompanhamento e gestão de obras residenciais de al
 - especificação funcional e modelo de dados revisados;
 - protótipo HTML navegável disponível para validação;
 - primeira fatia do backend NestJS e PostgreSQL implementada;
-- frontend de produção ainda não iniciado.
+- primeira fatia responsiva do frontend React implementada.
 
 ## Diretórios principais
 
@@ -15,6 +15,7 @@ Sistema web responsivo para acompanhamento e gestão de obras residenciais de al
 - [`backend/docs/`](backend/docs/README.md): arquitetura, banco, autenticação e guia da API.
 - [`docs/`](docs/README.md): documentação de produto e arquitetura geral.
 - [`prototipo/`](prototipo/prumo-v9-completo.html): protótipo navegável com dados fictícios.
+- [`docs/frontend/`](docs/frontend/README.md): arquitetura e estado da interface React.
 
 ## Backend
 
