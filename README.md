@@ -28,6 +28,17 @@ npm test
 
 A configuração, as migrações e a tela Swagger estão descritas no [README do backend](backend/README.md).
 
+## Execução local automatizada
+
+No Windows, abra o Git Bash na raiz do projeto:
+
+```bash
+./scripts/bomzeika-local.sh setup
+./scripts/bomzeika-local.sh all
+```
+
+O script solicita a senha do PostgreSQL sem gravá-la no repositório. Use `help` para listar os modos disponíveis.
+
 ## Princípios
 
 - orçamento, compromisso, execução e pagamento são grandezas separadas;
