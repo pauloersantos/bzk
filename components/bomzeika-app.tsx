@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, PackageCheck, Search, Settings2, ShieldCheck, Store, TrendingDown, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, Search, ShieldCheck, Store, X } from "lucide-react";
 import { useState } from "react";
+import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
 
 type ViewId = "dashboard" | "catalog" | "suppliers" | "projects";
 const projects = [
@@ -14,12 +15,6 @@ const stages = [
   { name: "Estrutura", supplier: "Concreta Estruturas", progress: 34, end: "28/02/2027", status: "No prazo" },
   { name: "Instalações", supplier: "Atria Sistemas", progress: 8, end: "30/06/2027", status: "Planejada" },
 ];
-const suppliers = [
-  { name: "Ateliê Norte Arquitetura", specialty: "Arquitetura e interiores", active: 3, rating: "4,9" },
-  { name: "Base Engenharia", specialty: "Fundações e contenções", active: 1, rating: "4,7" },
-  { name: "Concreta Estruturas", specialty: "Estruturas de concreto", active: 2, rating: "4,8" },
-  { name: "Atria Sistemas", specialty: "Elétrica, dados e automação", active: 2, rating: "4,6" },
-];
 const groups = [
   { label: "Pré-obra", items: [{ id: "catalog" as const, label: "Etapas e serviços", icon: ClipboardCheck }, { id: "suppliers" as const, label: "Fornecedores", icon: Store }, { id: "projects" as const, label: "Cadastro da obra", icon: Building2 }] },
   { label: "Execução da obra", items: [{ id: "dashboard" as const, label: "Painel da obra", icon: LayoutDashboard }], planned: ["Compras", "Pagamentos", "Cronograma", "Diário e qualidade"] },
@@ -28,8 +23,8 @@ const groups = [
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 /**
- * Primeira fatia da interface React. Os dados são uma demonstração identificada
- * e não são gravados no navegador; a API será a fonte oficial de valores e acesso.
+ * Interface responsiva: os cadastros de Pré-Obra usam a API como fonte oficial.
+ * O painel de Execução ainda contém indicadores demonstrativos identificados.
  */
 export function BomzeikaApp() {
   const [view, setView] = useState<ViewId>("dashboard");
@@ -45,22 +40,22 @@ export function BomzeikaApp() {
     <div className="app-workspace">
       <header className="topbar">
         <button className="icon-button mobile-only" type="button" aria-label="Abrir menu" onClick={() => setMobileMenu(true)}><Menu size={21} /></button>
-        <div className="project-switcher">
+        {view === "dashboard" ? <div className="project-switcher">
           <label htmlFor="obra-ativa">Obra ativa</label>
           <div className="select-wrap"><select id="obra-ativa" value={projectId} onChange={(event) => setProjectId(event.target.value)}>{projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ChevronDown aria-hidden="true" size={16} /></div>
           <span className="project-location">{project.city}</span>
-        </div>
+        </div> : <div className="module-context"><strong>Pré-obra</strong><span>Cadastros gerais, sem vínculo com obra ativa</span></div>}
         <div className="topbar-actions">
           <label className="search-box"><span className="sr-only">Pesquisar</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar" /></label>
           <div className="user-chip" aria-label="Usuário atual: Paulo, administrador"><span>PS</span><div><strong>Paulo</strong><small>Administrador</small></div></div>
         </div>
       </header>
       <main id="conteudo" className="content" tabIndex={-1}>
-        <div className="demo-notice"><ShieldCheck size={16} /> Ambiente de demonstração — dados fictícios, sem persistência</div>
+        <div className="demo-notice"><ShieldCheck size={16} /> Ambiente local de desenvolvimento — cadastros persistidos no PostgreSQL</div>
         {view === "dashboard" && <Dashboard projectName={project.name} />}
-        {view === "catalog" && <Catalog query={query} />}
-        {view === "suppliers" && <Suppliers query={query} />}
-        {view === "projects" && <Projects selectedId={projectId} onSelect={setProjectId} />}
+        {view === "catalog" && <CatalogManager query={query} />}
+        {view === "suppliers" && <SuppliersManager query={query} />}
+        {view === "projects" && <ProjectsManager query={query} />}
       </main>
     </div>
   </div>;
@@ -95,21 +90,3 @@ function Dashboard({ projectName }: { projectName: string }) {
     </section></>;
 }
 
-function Catalog({ query }: { query: string }) {
-  const visible = stages.filter((item) => `${item.name} ${item.supplier}`.toLowerCase().includes(query.toLowerCase()));
-  return <><PageHeading eyebrow="Pré-obra" title="Etapas e serviços" description="Estrutura base para configurar pesos, prazos e fornecedores de cada obra." action={<button className="primary-button" type="button" disabled title="Integração com a API pendente">Nova etapa</button>} /><div className="summary-strip"><div><ClipboardCheck /><span><b>18</b> etapas</span></div><div><PackageCheck /><span><b>146</b> serviços</span></div><div><TrendingDown /><span><b>100%</b> dos pesos</span></div></div><section className="panel table-panel"><div className="panel-heading"><div><span>Configuração da obra</span><h2>Etapas selecionadas</h2></div><Settings2 size={21} /></div><div className="responsive-table"><table><thead><tr><th>Etapa</th><th>Fornecedor</th><th>Conclusão</th><th>Término</th><th>Situação</th></tr></thead><tbody>{visible.map((stage) => <tr key={stage.name}><td><strong>{stage.name}</strong></td><td>{stage.supplier}</td><td><div className="inline-progress"><span style={{ width: `${stage.progress}%` }} /></div><small>{stage.progress}%</small></td><td>{stage.end}</td><td><Status value={stage.status} /></td></tr>)}</tbody></table></div></section></>;
-}
-
-function Suppliers({ query }: { query: string }) {
-  const visible = suppliers.filter((item) => `${item.name} ${item.specialty}`.toLowerCase().includes(query.toLowerCase()));
-  return <><PageHeading eyebrow="Pré-obra" title="Fornecedores" description="Empresas e profissionais qualificados para etapas, serviços e compras." action={<button className="primary-button" type="button" disabled title="Integração com a API pendente">Novo fornecedor</button>} /><section className="supplier-grid">{visible.map((supplier) => <article className="supplier-card" key={supplier.name}><div className="supplier-avatar"><Store size={22} /></div><div><h2>{supplier.name}</h2><p>{supplier.specialty}</p></div><dl><div><dt>Contratos ativos</dt><dd>{supplier.active}</dd></div><div><dt>Avaliação</dt><dd>{supplier.rating}</dd></div></dl><span className="verified"><ShieldCheck size={15} /> Cadastro verificado</span></article>)}</section></>;
-}
-
-function Projects({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
-  return <><PageHeading eyebrow="Cadastro da obra" title="Carteira de obras" description="Selecione uma obra para definir o contexto global do sistema." action={<button className="primary-button" type="button" disabled title="Integração com a API pendente">Nova obra</button>} /><section className="project-grid">{projects.map((project) => <button type="button" className={`project-card ${selectedId === project.id ? "selected" : ""}`} key={project.id} onClick={() => onSelect(project.id)}><span className="project-cover"><Building2 size={32} /></span><span className="project-copy"><small>{project.status}</small><strong>{project.name}</strong><span>{project.city}</span><span className="project-stats"><b>{project.id === "jardins" ? "38,4%" : "4,0%"}</b> concluído</span></span>{selectedId === project.id && <CheckCircle2 className="selected-check" size={21} />}</button>)}</section></>;
-}
-
-function Status({ value }: { value: string }) {
-  const style = value === "No prazo" ? "status-ok" : value === "Atenção" ? "status-warn" : "status-neutral";
-  return <span className={`status ${style}`}>{value}</span>;
-}
