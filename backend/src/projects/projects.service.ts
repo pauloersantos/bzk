@@ -1,37 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, TransactionContext } from '../database/database.service';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 
+const selection=`id,name,address,built_area_m2 as "builtAreaM2",approved_budget as "approvedBudget",planned_start as "plannedStart",planned_end as "plannedEnd",technical_responsible_id as "technicalResponsibleId",status,version`;
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly database: DatabaseService) {}
-
-  list(context: TransactionContext) {
-    return this.database.withContext(context, async (client) => (await this.database.query(client, `
-      select id, name, address, built_area_m2 as "builtAreaM2", approved_budget as "approvedBudget",
-             planned_start as "plannedStart", planned_end as "plannedEnd", status, version
-      from app.projects where organization_id = $1 order by created_at desc`, [context.organizationId])).rows);
-  }
-
-  get(context: TransactionContext, projectId: string) {
-    return this.database.withContext(context, async (client) => {
-      const result = await this.database.query(client, `
-        select id, name, address, built_area_m2 as "builtAreaM2", approved_budget as "approvedBudget",
-               planned_start as "plannedStart", planned_end as "plannedEnd", status, version
-        from app.projects where organization_id = $1 and id = $2`, [context.organizationId, projectId]);
-      if (!result.rowCount) throw new NotFoundException('Obra não encontrada');
-      return result.rows[0];
-    });
-  }
-
-  create(context: TransactionContext, input: CreateProjectDto) {
-    return this.database.withContext(context, async (client) => {
-      const result = await this.database.query(client, `
-        insert into app.projects(organization_id, name, address, built_area_m2, approved_budget, planned_start, planned_end, status, technical_responsible_id, created_by, updated_by)
-        values ($1,$2,$3,$4::numeric,$5::numeric,$6::date,$7::date,$8,$9,$10,$10)
-        returning id, name, address, built_area_m2 as "builtAreaM2", approved_budget as "approvedBudget", planned_start as "plannedStart", planned_end as "plannedEnd", status, version`,
-        [context.organizationId, input.name, input.address, input.builtAreaM2, input.approvedBudget, input.plannedStart, input.plannedEnd, input.status, input.technicalResponsibleId ?? null, context.userId]);
-      return result.rows[0];
-    });
-  }
+  constructor(private readonly database:DatabaseService){}
+  private changed<T>(rows:T[]):T{if(!rows[0])throw new ConflictException('Obra alterada por outro usuário; atualize a tela');return rows[0];}
+  list(context:TransactionContext){return this.database.withContext(context,async client=>(await this.database.query(client,`select ${selection} from app.projects where organization_id=$1 order by created_at desc`,[context.organizationId])).rows);}
+  get(context:TransactionContext,id:string){return this.database.withContext(context,async client=>{const result=await this.database.query(client,`select ${selection} from app.projects where organization_id=$1 and id=$2`,[context.organizationId,id]);if(!result.rows[0])throw new NotFoundException('Obra não encontrada');return result.rows[0];});}
+  create(context:TransactionContext,input:CreateProjectDto){return this.database.withContext(context,async client=>(await this.database.query(client,`insert into app.projects(organization_id,name,address,built_area_m2,approved_budget,planned_start,planned_end,status,technical_responsible_id,created_by,updated_by) values($1,$2,$3,$4::numeric,$5::numeric,$6::date,$7::date,$8,$9,$10,$10) returning ${selection}`,[context.organizationId,input.name,input.address,input.builtAreaM2,input.approvedBudget,input.plannedStart,input.plannedEnd,input.status,input.technicalResponsibleId??null,context.userId])).rows[0]);}
+  update(context:TransactionContext,id:string,input:UpdateProjectDto){if(input.plannedStart&&input.plannedEnd&&input.plannedEnd<input.plannedStart)throw new ConflictException('Término deve ser posterior ao início');return this.database.withContext(context,async client=>this.changed((await this.database.query(client,`update app.projects set name=coalesce($3,name),address=coalesce($4,address),built_area_m2=coalesce($5::numeric,built_area_m2),approved_budget=coalesce($6::numeric,approved_budget),planned_start=coalesce($7::date,planned_start),planned_end=coalesce($8::date,planned_end),status=coalesce($9,status),technical_responsible_id=coalesce($10,technical_responsible_id),updated_by=$11 where organization_id=$1 and id=$2 and version=$12 returning ${selection}`,[context.organizationId,id,input.name??null,input.address??null,input.builtAreaM2??null,input.approvedBudget??null,input.plannedStart??null,input.plannedEnd??null,input.status??null,input.technicalResponsibleId??null,context.userId,input.version])).rows));}
+  cancel(context:TransactionContext,id:string,version:number){return this.database.withContext(context,async client=>this.changed((await this.database.query(client,`update app.projects set status='cancelled',updated_by=$3 where organization_id=$1 and id=$2 and version=$4 returning ${selection}`,[context.organizationId,id,context.userId,version])).rows));}
 }

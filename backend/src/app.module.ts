@@ -16,8 +16,10 @@ import { CatalogModule } from './catalog/catalog.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { ProjectConfigModule } from './project-config/project-config.module';
 import { randomUUID } from 'node:crypto';
+import { DevAuthController } from './common/auth/dev-auth.controller';
 
 @Module({
+  controllers: [DevAuthController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [configuration], validate: validateEnvironment }),
     JwtModule.register({ global: true }),
