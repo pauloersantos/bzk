@@ -14,6 +14,9 @@ export class CatalogController {
   constructor(private readonly service: CatalogService) {}
   private context(user: AuthenticatedUser, request: Request & { requestId?: string }) { return { ...user, requestId: request.requestId }; }
 
+  @Get('categories') @ApiOperation({ summary: 'Lista as 34 categorias do catálogo' })
+  categories(@CurrentUser() user: AuthenticatedUser, @Req() request: Request & { requestId?: string }) { return this.service.listCategories(this.context(user, request)); }
+
   @Get('stages') @ApiOperation({ summary: 'Lista etapas' })
   stages(@CurrentUser() user: AuthenticatedUser, @Req() request: Request & { requestId?: string }) { return this.service.listStages(this.context(user, request)); }
   @Post('stages') @ApiOperation({ summary: 'Cadastra etapa' })

@@ -15,6 +15,7 @@
     "migrate": "tsx scripts/migrate.ts up",
     "migrate:status": "tsx scripts/migrate.ts status",
     "seed:dev": "tsx scripts/seed-dev.ts",
+    "catalog:load": "tsx scripts/load-high-standard-catalog.ts",
     "config:encrypt": "tsx scripts/encrypt-env.ts",
     "token:dev": "tsx scripts/create-dev-token.ts"
   },
