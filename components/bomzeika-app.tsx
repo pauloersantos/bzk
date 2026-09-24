@@ -1,15 +1,14 @@
 "use client";
 
 import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, Search, ShieldCheck, Store, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
 import { Contracts, InitialBudget, ProjectConfiguration, ProjectDocuments } from "./project-registration";
+import { ExecutionKind, ExecutionWorkspace } from "./execution-workspace";
 
-type ViewId = "dashboard" | "catalog" | "suppliers" | "projects" | "project-config" | "project-documents" | "initial-budget" | "contracts";
-const projects = [
-  { id: "jardins", name: "Residência Jardins", city: "São Paulo, SP", status: "Em execução" },
-  { id: "boa-vista", name: "Casa Boa Vista", city: "Porto Feliz, SP", status: "Planejamento" },
-];
+type ViewId = "dashboard" | "catalog" | "suppliers" | "projects" | "project-config" | "project-documents" | "initial-budget" | "contracts" | ExecutionKind;
+type ActiveProject={id:string;name:string;address:string;status:string};
 const stages = [
   { name: "Projetos e aprovações", supplier: "Ateliê Norte Arquitetura", progress: 92, end: "18/10/2026", status: "No prazo" },
   { name: "Fundações e contenções", supplier: "Base Engenharia", progress: 68, end: "12/12/2026", status: "Atenção" },
@@ -19,7 +18,7 @@ const stages = [
 const groups = [
   { label: "Pré-obra", items: [{ id: "catalog" as const, label: "Etapas e serviços", icon: ClipboardCheck }, { id: "suppliers" as const, label: "Fornecedores", icon: Store }] },
   { label: "Cadastro da obra", items: [{ id: "projects" as const, label: "Obras", icon: Building2 }, { id: "project-config" as const, label: "Configurações da obra", icon: ClipboardCheck }, { id: "project-documents" as const, label: "Projetos e documentação", icon: ShieldCheck }, { id: "initial-budget" as const, label: "Orçamento inicial", icon: CircleDollarSign }, { id: "contracts" as const, label: "Contratos e aditivos", icon: ClipboardCheck }] },
-  { label: "Execução da obra", items: [{ id: "dashboard" as const, label: "Painel da obra", icon: LayoutDashboard }], planned: ["Compras", "Pagamentos", "Cronograma", "Diário e qualidade"] },
+  { label: "Execução da obra", items: [{ id: "dashboard" as const, label: "Painel da obra", icon: LayoutDashboard }, { id: "infrastructure" as const, label: "Infraestrutura", icon: Building2 }, { id: "execution-budget" as const, label: "Orçamento e custos", icon: CircleDollarSign }, { id: "purchases" as const, label: "Compras", icon: Store }, { id: "payments" as const, label: "Pagamentos", icon: CircleDollarSign }, { id: "finance" as const, label: "Financeiro", icon: BarChart3 }, { id: "schedule" as const, label: "Cronograma", icon: CalendarDays }, { id: "diary" as const, label: "Diário e qualidade", icon: ClipboardCheck }] },
   { label: "Pós-obra", items: [], planned: ["Entrega e garantias", "Venda", "Memorial da obra"] },
 ];
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -30,10 +29,13 @@ const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
  */
 export function BomzeikaApp() {
   const [view, setView] = useState<ViewId>("dashboard");
-  const [projectId, setProjectId] = useState(projects[0].id);
+  const [activeProjects, setActiveProjects] = useState<ActiveProject[]>([]);
+  const [projectId, setProjectId] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [query, setQuery] = useState("");
-  const project = projects.find((item) => item.id === projectId) ?? projects[0];
+  const project = activeProjects.find((item) => item.id === projectId);
+  useEffect(()=>{const task=setTimeout(()=>void api<ActiveProject[]>("/projects").then(rows=>{const active=rows.filter(x=>x.status==="active");setActiveProjects(active);setProjectId(current=>active.some(x=>x.id===current)?current:active[0]?.id??"")}).catch(()=>setActiveProjects([])),0);return()=>clearTimeout(task)},[]);
+  const executionViews: ViewId[] = ["dashboard","infrastructure","execution-budget","purchases","payments","finance","schedule","diary"];
   const navigate = (next: ViewId) => { setView(next); setMobileMenu(false); };
 
   return <div className="app-shell">
@@ -44,9 +46,9 @@ export function BomzeikaApp() {
         <button className="icon-button mobile-only" type="button" aria-label="Abrir menu" onClick={() => setMobileMenu(true)}><Menu size={21} /></button>
         {view === "dashboard" ? <div className="project-switcher">
           <label htmlFor="obra-ativa">Obra ativa</label>
-          <div className="select-wrap"><select id="obra-ativa" value={projectId} onChange={(event) => setProjectId(event.target.value)}>{projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ChevronDown aria-hidden="true" size={16} /></div>
-          <span className="project-location">{project.city}</span>
-        </div> : <div className="module-context"><strong>Pré-obra</strong><span>Cadastros gerais, sem vínculo com obra ativa</span></div>}
+          <div className="select-wrap"><select id="obra-ativa" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Selecione</option>{activeProjects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ChevronDown aria-hidden="true" size={16} /></div>
+          <span className="project-location">{project?.address??"Nenhuma obra ativa"}</span>
+        </div> : <div className="module-context"><strong>{executionViews.includes(view)?"Execução da obra":"Pré-obra"}</strong><span>{executionViews.includes(view)?"Operação vinculada à obra ativa":"Cadastros gerais e configuração das obras"}</span></div>}
         <div className="topbar-actions">
           <label className="search-box"><span className="sr-only">Pesquisar</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar" /></label>
           <div className="user-chip" aria-label="Usuário atual: Paulo, administrador"><span>PS</span><div><strong>Paulo</strong><small>Administrador</small></div></div>
@@ -54,7 +56,7 @@ export function BomzeikaApp() {
       </header>
       <main id="conteudo" className="content" tabIndex={-1}>
         <div className="demo-notice"><ShieldCheck size={16} /> Ambiente local de desenvolvimento — cadastros persistidos no PostgreSQL</div>
-        {view === "dashboard" && <Dashboard projectName={project.name} />}
+        {view === "dashboard" && (project?<Dashboard projectName={project.name} />:<div className="state-box">Não há obra ativa. Altere o status de uma obra em Cadastro da obra → Obras para liberar a Execução.</div>)}
         {view === "catalog" && <CatalogManager query={query} />}
         {view === "suppliers" && <SuppliersManager query={query} />}
         {view === "projects" && <ProjectsManager query={query} />}
@@ -62,6 +64,13 @@ export function BomzeikaApp() {
         {view === "project-documents" && <ProjectDocuments />}
         {view === "initial-budget" && <InitialBudget />}
         {view === "contracts" && <Contracts />}
+        {view === "infrastructure" && <ExecutionWorkspace kind="infrastructure" />}
+        {view === "execution-budget" && <ExecutionWorkspace kind="execution-budget" />}
+        {view === "purchases" && <ExecutionWorkspace kind="purchases" />}
+        {view === "payments" && <ExecutionWorkspace kind="payments" />}
+        {view === "finance" && <ExecutionWorkspace kind="finance" />}
+        {view === "schedule" && <ExecutionWorkspace kind="schedule" />}
+        {view === "diary" && <ExecutionWorkspace kind="diary" />}
       </main>
     </div>
   </div>;
