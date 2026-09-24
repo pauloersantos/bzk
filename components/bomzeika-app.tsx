@@ -6,8 +6,9 @@ import { api } from "@/lib/api";
 import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
 import { Contracts, InitialBudget, ProjectConfiguration, ProjectDocuments } from "./project-registration";
 import { ExecutionKind, ExecutionWorkspace } from "./execution-workspace";
+import { MemorialWorkspace, PostConstructionWorkspace } from "./post-construction-workspace";
 
-type ViewId = "dashboard" | "catalog" | "suppliers" | "projects" | "project-config" | "project-documents" | "initial-budget" | "contracts" | ExecutionKind;
+type ViewId = "dashboard" | "catalog" | "suppliers" | "projects" | "project-config" | "project-documents" | "initial-budget" | "contracts" | "handover" | "sales" | "memorial" | ExecutionKind;
 type ActiveProject={id:string;name:string;address:string;status:string};
 const stages = [
   { name: "Projetos e aprovações", supplier: "Ateliê Norte Arquitetura", progress: 92, end: "18/10/2026", status: "No prazo" },
@@ -19,7 +20,7 @@ const groups = [
   { label: "Pré-obra", items: [{ id: "catalog" as const, label: "Etapas e serviços", icon: ClipboardCheck }, { id: "suppliers" as const, label: "Fornecedores", icon: Store }] },
   { label: "Cadastro da obra", items: [{ id: "projects" as const, label: "Obras", icon: Building2 }, { id: "project-config" as const, label: "Configurações da obra", icon: ClipboardCheck }, { id: "project-documents" as const, label: "Projetos e documentação", icon: ShieldCheck }, { id: "initial-budget" as const, label: "Orçamento inicial", icon: CircleDollarSign }, { id: "contracts" as const, label: "Contratos e aditivos", icon: ClipboardCheck }] },
   { label: "Execução da obra", items: [{ id: "dashboard" as const, label: "Painel da obra", icon: LayoutDashboard }, { id: "infrastructure" as const, label: "Infraestrutura", icon: Building2 }, { id: "execution-budget" as const, label: "Orçamento e custos", icon: CircleDollarSign }, { id: "purchases" as const, label: "Compras", icon: Store }, { id: "payments" as const, label: "Pagamentos", icon: CircleDollarSign }, { id: "finance" as const, label: "Financeiro", icon: BarChart3 }, { id: "schedule" as const, label: "Cronograma", icon: CalendarDays }, { id: "diary" as const, label: "Diário e qualidade", icon: ClipboardCheck }] },
-  { label: "Pós-obra", items: [], planned: ["Entrega e garantias", "Venda", "Memorial da obra"] },
+  { label: "Pós-obra", items: [{ id: "handover" as const, label: "Entrega e garantias", icon: CheckCircle2 }, { id: "sales" as const, label: "Venda e marketing", icon: CircleDollarSign }, { id: "memorial" as const, label: "Memorial da obra", icon: ClipboardCheck }] },
 ];
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
@@ -36,6 +37,7 @@ export function BomzeikaApp() {
   const project = activeProjects.find((item) => item.id === projectId);
   useEffect(()=>{const task=setTimeout(()=>void api<ActiveProject[]>("/projects").then(rows=>{const active=rows.filter(x=>x.status==="active");setActiveProjects(active);setProjectId(current=>active.some(x=>x.id===current)?current:active[0]?.id??"")}).catch(()=>setActiveProjects([])),0);return()=>clearTimeout(task)},[]);
   const executionViews: ViewId[] = ["dashboard","infrastructure","execution-budget","purchases","payments","finance","schedule","diary"];
+  const postViews: ViewId[] = ["handover","sales","memorial"];
   const navigate = (next: ViewId) => { setView(next); setMobileMenu(false); };
 
   return <div className="app-shell">
@@ -48,7 +50,7 @@ export function BomzeikaApp() {
           <label htmlFor="obra-ativa">Obra ativa</label>
           <div className="select-wrap"><select id="obra-ativa" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Selecione</option>{activeProjects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ChevronDown aria-hidden="true" size={16} /></div>
           <span className="project-location">{project?.address??"Nenhuma obra ativa"}</span>
-        </div> : <div className="module-context"><strong>{executionViews.includes(view)?"Execução da obra":"Pré-obra"}</strong><span>{executionViews.includes(view)?"Operação vinculada à obra ativa":"Cadastros gerais e configuração das obras"}</span></div>}
+        </div> : <div className="module-context"><strong>{executionViews.includes(view)?"Execução da obra":postViews.includes(view)?"Pós-obra":"Pré-obra"}</strong><span>{executionViews.includes(view)?"Operação vinculada à obra ativa":postViews.includes(view)?"Entrega, comercialização e memória da obra":"Cadastros gerais e configuração das obras"}</span></div>}
         <div className="topbar-actions">
           <label className="search-box"><span className="sr-only">Pesquisar</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar" /></label>
           <div className="user-chip" aria-label="Usuário atual: Paulo, administrador"><span>PS</span><div><strong>Paulo</strong><small>Administrador</small></div></div>
@@ -71,6 +73,9 @@ export function BomzeikaApp() {
         {view === "finance" && <ExecutionWorkspace kind="finance" />}
         {view === "schedule" && <ExecutionWorkspace kind="schedule" />}
         {view === "diary" && <ExecutionWorkspace kind="diary" />}
+        {view === "handover" && <PostConstructionWorkspace kind="handover" />}
+        {view === "sales" && <PostConstructionWorkspace kind="sales" />}
+        {view === "memorial" && <MemorialWorkspace />}
       </main>
     </div>
   </div>;
@@ -80,7 +85,7 @@ function Sidebar({ view, open, onClose, onNavigate }: { view: ViewId; open: bool
   return <>{open && <button className="sidebar-backdrop" aria-label="Fechar menu" onClick={onClose} />}<aside className={`sidebar ${open ? "sidebar-open" : ""}`} aria-label="Navegação principal">
     <div className="brand"><span className="brand-mark"><HardHat size={22} /></span><div><strong>BOMzeika</strong><small>OBRAS</small></div></div>
     <button className="icon-button close-menu mobile-only" type="button" aria-label="Fechar menu" onClick={onClose}><X size={20} /></button>
-    <nav>{groups.map((group) => <section className="nav-group" key={group.label}><h2>{group.label}</h2>{group.items.map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? "nav-active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => onNavigate(item.id)}><Icon size={18} /><span>{item.label}</span></button>; })}{group.planned?.map((item) => <div className="nav-planned" key={item}><span>{item}</span><small>em breve</small></div>)}</section>)}</nav>
+    <nav>{groups.map((group) => <section className="nav-group" key={group.label}><h2>{group.label}</h2>{group.items.map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={view === item.id ? "nav-active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => onNavigate(item.id)}><Icon size={18} /><span>{item.label}</span></button>; })}</section>)}</nav>
     <div className="sidebar-footer"><ShieldCheck size={17} /><span>Sessão protegida</span></div>
   </aside></>;
 }
