@@ -3,8 +3,9 @@
 import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, Search, ShieldCheck, Store, X } from "lucide-react";
 import { useState } from "react";
 import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
+import { Contracts, InitialBudget, ProjectConfiguration, ProjectDocuments } from "./project-registration";
 
-type ViewId = "dashboard" | "catalog" | "suppliers" | "projects";
+type ViewId = "dashboard" | "catalog" | "suppliers" | "projects" | "project-config" | "project-documents" | "initial-budget" | "contracts";
 const projects = [
   { id: "jardins", name: "Residência Jardins", city: "São Paulo, SP", status: "Em execução" },
   { id: "boa-vista", name: "Casa Boa Vista", city: "Porto Feliz, SP", status: "Planejamento" },
@@ -16,7 +17,8 @@ const stages = [
   { name: "Instalações", supplier: "Atria Sistemas", progress: 8, end: "30/06/2027", status: "Planejada" },
 ];
 const groups = [
-  { label: "Pré-obra", items: [{ id: "catalog" as const, label: "Etapas e serviços", icon: ClipboardCheck }, { id: "suppliers" as const, label: "Fornecedores", icon: Store }, { id: "projects" as const, label: "Cadastro da obra", icon: Building2 }] },
+  { label: "Pré-obra", items: [{ id: "catalog" as const, label: "Etapas e serviços", icon: ClipboardCheck }, { id: "suppliers" as const, label: "Fornecedores", icon: Store }] },
+  { label: "Cadastro da obra", items: [{ id: "projects" as const, label: "Obras", icon: Building2 }, { id: "project-config" as const, label: "Configurações da obra", icon: ClipboardCheck }, { id: "project-documents" as const, label: "Projetos e documentação", icon: ShieldCheck }, { id: "initial-budget" as const, label: "Orçamento inicial", icon: CircleDollarSign }, { id: "contracts" as const, label: "Contratos e aditivos", icon: ClipboardCheck }] },
   { label: "Execução da obra", items: [{ id: "dashboard" as const, label: "Painel da obra", icon: LayoutDashboard }], planned: ["Compras", "Pagamentos", "Cronograma", "Diário e qualidade"] },
   { label: "Pós-obra", items: [], planned: ["Entrega e garantias", "Venda", "Memorial da obra"] },
 ];
@@ -56,6 +58,10 @@ export function BomzeikaApp() {
         {view === "catalog" && <CatalogManager query={query} />}
         {view === "suppliers" && <SuppliersManager query={query} />}
         {view === "projects" && <ProjectsManager query={query} />}
+        {view === "project-config" && <ProjectConfiguration />}
+        {view === "project-documents" && <ProjectDocuments />}
+        {view === "initial-budget" && <InitialBudget />}
+        {view === "contracts" && <Contracts />}
       </main>
     </div>
   </div>;
