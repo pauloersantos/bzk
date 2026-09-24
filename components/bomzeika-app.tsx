@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, Search, ShieldCheck, Store, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, ShieldCheck, Store, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
@@ -33,11 +33,8 @@ export function BomzeikaApp() {
   const [activeProjects, setActiveProjects] = useState<ActiveProject[]>([]);
   const [projectId, setProjectId] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [query, setQuery] = useState("");
   const project = activeProjects.find((item) => item.id === projectId);
   useEffect(()=>{const task=setTimeout(()=>void api<ActiveProject[]>("/projects").then(rows=>{const active=rows.filter(x=>x.status==="active");setActiveProjects(active);setProjectId(current=>active.some(x=>x.id===current)?current:active[0]?.id??"")}).catch(()=>setActiveProjects([])),0);return()=>clearTimeout(task)},[]);
-  const executionViews: ViewId[] = ["dashboard","infrastructure","execution-budget","purchases","payments","finance","schedule","diary"];
-  const postViews: ViewId[] = ["handover","sales","memorial"];
   const navigate = (next: ViewId) => { setView(next); setMobileMenu(false); };
 
   return <div className="app-shell">
@@ -50,18 +47,16 @@ export function BomzeikaApp() {
           <label htmlFor="obra-ativa">Obra ativa</label>
           <div className="select-wrap"><select id="obra-ativa" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Selecione</option>{activeProjects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ChevronDown aria-hidden="true" size={16} /></div>
           <span className="project-location">{project?.address??"Nenhuma obra ativa"}</span>
-        </div> : <div className="module-context"><strong>{executionViews.includes(view)?"Execução da obra":postViews.includes(view)?"Pós-obra":"Pré-obra"}</strong><span>{executionViews.includes(view)?"Operação vinculada à obra ativa":postViews.includes(view)?"Entrega, comercialização e memória da obra":"Cadastros gerais e configuração das obras"}</span></div>}
+        </div> : null}
         <div className="topbar-actions">
-          <label className="search-box"><span className="sr-only">Pesquisar</span><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar" /></label>
           <div className="user-chip" aria-label="Usuário atual: Paulo, administrador"><span>PS</span><div><strong>Paulo</strong><small>Administrador</small></div></div>
         </div>
       </header>
       <main id="conteudo" className="content" tabIndex={-1}>
-        <div className="demo-notice"><ShieldCheck size={16} /> Ambiente local de desenvolvimento — cadastros persistidos no PostgreSQL</div>
         {view === "dashboard" && (project?<Dashboard projectName={project.name} />:<div className="state-box">Não há obra ativa. Altere o status de uma obra em Cadastro da obra → Obras para liberar a Execução.</div>)}
-        {view === "catalog" && <CatalogManager query={query} />}
-        {view === "suppliers" && <SuppliersManager query={query} />}
-        {view === "projects" && <ProjectsManager query={query} />}
+        {view === "catalog" && <CatalogManager query="" />}
+        {view === "suppliers" && <SuppliersManager query="" />}
+        {view === "projects" && <ProjectsManager query="" />}
         {view === "project-config" && <ProjectConfiguration />}
         {view === "project-documents" && <ProjectDocuments />}
         {view === "initial-budget" && <InitialBudget />}
