@@ -51,20 +51,24 @@ async function main(): Promise<void> {
     // As configurações abaixo referenciam o catálogo e precisam ser refeitas após sua substituição.
     await client.query(`truncate app.project_stage_dependencies,app.project_supplier_assignments,app.project_services,app.project_stages,app.service_catalog,app.stage_catalog cascade`);
     let predecessor:string|null=null;
+    let substageNumber=1;
     let serviceNumber=1;
     for(let index=0;index<catalog.length;index++){
       const [name,serviceNames]=catalog[index];
       const categoryCode=`CAT-${String(index+1).padStart(2,'0')}`;
       const stageCode=`ET-${String(index+1).padStart(2,'0')}`;
-      const stage=(await client.query<{id:string}>(`insert into app.stage_catalog(organization_id,category_code,parent_stage_id,code,name,description,display_order,created_by,updated_by) values($1,$2,$3,$4,$5,$6,$7,$8,$8) returning id`,[env.DEV_ORGANIZATION_ID,categoryCode,predecessor,stageCode,name,`Etapa padrão de ${name.toLowerCase()} para obra residencial de alto padrão.`,index+1,env.DEV_USER_ID])).rows[0];
+      const stage=(await client.query<{id:string}>(`insert into app.stage_catalog(organization_id,item_type,category_code,predecessor_stage_id,code,name,description,display_order,created_by,updated_by) values($1,'stage',$2,$3,$4,$5,$6,$7,$8,$8) returning id`,[env.DEV_ORGANIZATION_ID,categoryCode,predecessor,stageCode,name,`Etapa padrão de ${name.toLowerCase()} para obra residencial de alto padrão.`,index+1,env.DEV_USER_ID])).rows[0];
+      let substageOrder=1;
       for(const serviceName of serviceNames.split('|')){
+        const substageCode=`SB-${String(substageNumber++).padStart(3,'0')}`;
+        const substage=(await client.query<{id:string}>(`insert into app.stage_catalog(organization_id,item_type,category_code,parent_stage_id,code,name,description,display_order,created_by,updated_by) values($1,'substage',$2,$3,$4,$5,$6,$7,$8,$8) returning id`,[env.DEV_ORGANIZATION_ID,categoryCode,stage.id,substageCode,serviceName,`Subetapa padrão vinculada à etapa ${name}.`,substageOrder++,env.DEV_USER_ID])).rows[0];
         const serviceCode=`SR-${String(serviceNumber++).padStart(3,'0')}`;
-        await client.query(`insert into app.service_catalog(organization_id,category_code,stage_id,code,name,description,unit_code,cost_category_code,default_weight,default_duration_days,progress_criterion,created_by,updated_by) values($1,$2,$3,$4,$5,$6,'un','services',0,1,'percentage',$7,$7)`,[env.DEV_ORGANIZATION_ID,categoryCode,stage.id,serviceCode,serviceName,`Serviço padrão vinculado à etapa ${name}.`,env.DEV_USER_ID]);
+        await client.query(`insert into app.service_catalog(organization_id,category_code,stage_id,code,name,description,unit_code,cost_category_code,default_weight,default_duration_days,progress_criterion,created_by,updated_by) values($1,$2,$3,$4,$5,$6,'un','services',0,1,'percentage',$7,$7)`,[env.DEV_ORGANIZATION_ID,categoryCode,substage.id,serviceCode,serviceName,`Serviço padrão vinculado à subetapa ${serviceName}.`,env.DEV_USER_ID]);
       }
       predecessor=stage.id;
     }
     await client.query('commit');
-    console.log(`Catálogo carregado: ${catalog.length} etapas e ${serviceNumber-1} serviços.`);
+    console.log(`Catálogo carregado: ${catalog.length} etapas, ${substageNumber-1} subetapas e ${serviceNumber-1} serviços.`);
   } catch(error) {
     await client.query('rollback');
     throw error;
