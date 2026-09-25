@@ -16,10 +16,11 @@ import { CatalogModule } from './catalog/catalog.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { ProjectConfigModule } from './project-config/project-config.module';
 import { randomUUID } from 'node:crypto';
-import { DevAuthController } from './common/auth/dev-auth.controller';
+import { AuthModule } from './auth/auth.module';
+import { CsrfGuard } from './auth/csrf.guard';
 
 @Module({
-  controllers: [DevAuthController],
+  controllers: [],
   imports: [
     ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [configuration], validate: validateEnvironment }),
     JwtModule.register({ global: true }),
@@ -39,6 +40,7 @@ import { DevAuthController } from './common/auth/dev-auth.controller';
       }),
     }),
     DatabaseModule,
+    AuthModule,
     HealthModule,
     ProjectsModule,
     CatalogModule,
@@ -48,6 +50,7 @@ import { DevAuthController } from './common/auth/dev-auth.controller';
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },
   ],
 })

@@ -4,8 +4,9 @@ import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { AuthenticatedUser } from './auth.types';
+import { ACCESS_COOKIE, AccessPayload } from '../../auth/auth.types';
+import { AuthService } from '../../auth/auth.service';
 
-interface TokenPayload { sub: string; organizationId: string; roles?: string[] }
 
 /**
  * Valida o access token antes de qualquer controller protegido.
@@ -19,21 +20,24 @@ interface TokenPayload { sub: string; organizationId: string; roles?: string[] }
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector, private readonly jwt: JwtService, private readonly config: ConfigService) {}
+  constructor(private readonly reflector: Reflector, private readonly jwt: JwtService, private readonly config: ConfigService,private readonly auth:AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [context.getHandler(), context.getClass()])) return true;
-    const request = context.switchToHttp().getRequest<{ headers: Record<string, string | undefined>; user?: AuthenticatedUser }>();
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    if (type !== 'Bearer' || !token) throw new UnauthorizedException('Token Bearer obrigatório');
+    const request = context.switchToHttp().getRequest<{ headers: Record<string, string | undefined>;cookies?:Record<string,string>; user?: AuthenticatedUser;authSessionId?:string }>();
+    const [type, bearer] = request.headers.authorization?.split(' ') ?? [];
+    const token=request.cookies?.[ACCESS_COOKIE]??(type==='Bearer'?bearer:undefined);
+    if (!token) throw new UnauthorizedException('Sessão obrigatória');
     try {
-      const payload = await this.jwt.verifyAsync<TokenPayload>(token, {
+      const payload = await this.jwt.verifyAsync<AccessPayload>(token, {
         secret: this.config.getOrThrow<string>('jwt.secret'),
         issuer: this.config.getOrThrow<string>('jwt.issuer'),
         audience: this.config.getOrThrow<string>('jwt.audience'),
       });
-      if (!payload.sub || !payload.organizationId) throw new Error('claims ausentes');
-      request.user = { userId: payload.sub, organizationId: payload.organizationId, roles: payload.roles ?? [] };
+      if (!payload.sub || !payload.organizationId||!payload.sid) throw new Error('claims ausentes');
+      const session=await this.auth.validateSession(payload);if(!session)throw new Error('sessão revogada');
+      request.user = { userId: payload.sub, organizationId: payload.organizationId, roles: [session.roleCode] };
+      request.authSessionId=payload.sid;
       return true;
     } catch {
       throw new UnauthorizedException('Token inválido ou expirado');

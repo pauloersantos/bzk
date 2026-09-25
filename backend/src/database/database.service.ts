@@ -31,6 +31,11 @@ export class DatabaseService implements OnModuleDestroy {
 
   async ping(): Promise<void> { await this.pool.query('select 1'); }
 
+  /** Uso restrito ao fluxo de autenticação antes de existir um contexto RLS. */
+  systemQuery<T extends QueryResultRow>(text: string, values: readonly unknown[] = []): Promise<QueryResult<T>> {
+    return this.pool.query<T>(text, values as unknown[]);
+  }
+
   /**
    * Executa uma unidade de trabalho no contexto autenticado.
    * `set_config(..., true)` limita os valores à transação e impede vazamento de

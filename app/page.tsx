@@ -1,5 +1,5 @@
-import { BomzeikaApp } from "@/components/bomzeika-app";
+import { AuthGate } from "@/components/auth-gate";
 
 export default function Home() {
-  return <BomzeikaApp />;
+  return <AuthGate />;
 }

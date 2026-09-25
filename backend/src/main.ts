@@ -8,6 +8,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { loadSecureEnvironment } from './config/secure-env';
 import { json } from 'express';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap(): Promise<void> {
   loadSecureEnvironment();
@@ -15,6 +16,7 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService);
   app.useLogger(app.get(Logger));
   app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(cookieParser());
   app.enableCors({ origin: config.getOrThrow<string[]>('cors.origins'), credentials: true, methods: ['GET', 'POST', 'PATCH', 'DELETE'] });
   app.use(json({ limit: '1mb' }));
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, stopAtFirstError: false }));

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, ShieldCheck, Store, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, LogOut, Menu, ShieldCheck, Store, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
@@ -29,7 +29,7 @@ const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
  * Interface responsiva: os cadastros de Pré-Obra usam a API como fonte oficial.
  * O painel de Execução ainda contém indicadores demonstrativos identificados.
  */
-export function BomzeikaApp() {
+export function BomzeikaApp({user,organizationName,onLogout}:{user:{name:string;email:string;role:string};organizationName:string;onLogout:()=>void}) {
   const [view, setView] = useState<ViewId>("dashboard");
   const [activeProjects, setActiveProjects] = useState<ActiveProject[]>([]);
   const [projectId, setProjectId] = useState("");
@@ -45,7 +45,7 @@ export function BomzeikaApp() {
       <header className="topbar">
         <button className="icon-button mobile-only" type="button" aria-label="Abrir menu" onClick={() => setMobileMenu(true)}><Menu size={21} /></button>
         <div className="topbar-actions">
-          <div className="user-chip" aria-label="Usuário atual: Paulo, administrador"><span>PS</span><div><strong>Paulo</strong><small>Administrador</small></div></div>
+          <div className="user-chip" aria-label={`Usuário atual: ${user.name}`}><span>{initials(user.name)}</span><div><strong>{user.name}</strong><small>{roleLabel(user.role)} · {organizationName}</small></div></div><button className="logout-button" type="button" onClick={onLogout} title="Sair do sistema"><LogOut size={17}/><span>Sair</span></button>
         </div>
       </header>
       <main id="conteudo" className="content" tabIndex={-1}>
@@ -71,6 +71,9 @@ export function BomzeikaApp() {
     </div>
   </div>;
 }
+
+function initials(name:string){return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()||"U"}
+function roleLabel(role:string){return({admin:"Administrador",owner:"Proprietário",manager:"Gestor",finance:"Financeiro",technical:"Responsável técnico",supplier:"Fornecedor"}as Record<string,string>)[role]??role}
 
 function Sidebar({ view, open, onClose, onNavigate }: { view: ViewId; open: boolean; onClose: () => void; onNavigate: (view: ViewId) => void }) {
   return <>{open && <button className="sidebar-backdrop" aria-label="Fechar menu" onClick={onClose} />}<aside className={`sidebar ${open ? "sidebar-open" : ""}`} aria-label="Navegação principal">

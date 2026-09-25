@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsNumberString, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsNumberString, IsOptional, IsString, IsUUID, Length, Min } from 'class-validator';
 
 export class CreateServiceDto {
   @ApiProperty({ example: 'CAT-08' }) @IsString() @Length(6, 6) categoryCode!: string;
@@ -12,4 +12,3 @@ export class CreateServiceDto {
   @ApiProperty({ enum: ['quantity', 'percentage', 'milestone'], example: 'quantity' }) @IsIn(['quantity', 'percentage', 'milestone']) progressCriterion!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
 }
-

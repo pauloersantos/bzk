@@ -1,10 +1,12 @@
 # Autenticação segura
 
-## Estado atual
+## Estado implementado
 
-O backend valida access tokens JWT em todas as rotas privadas. A validação exige assinatura, emissor, audiência e as claims `sub` e `organizationId`. O utilitário `token:dev` é bloqueado em produção e serve apenas para testar a primeira fatia.
+O backend implementa login com hash Argon2id, sessão revogável, access JWT de dez minutos em cookie HttpOnly, refresh opaco de 256 bits armazenado somente como hash e rotação a cada uso. A reutilização do refresh anterior revoga a família. As rotas privadas validam assinatura, emissor, audiência, sessão, usuário e vínculo ativo com a organização antes de criar o contexto RLS.
 
-Ainda não existe endpoint de login de produção. Portanto, a entrega atual não deve ser divulgada como autenticação completa.
+As mutações exigem cookie e cabeçalho CSRF correspondentes e rejeitam origens fora da lista configurada. Login possui rate limit específico, bloqueio temporário após cinco falhas e resposta uniforme para reduzir enumeração. Eventos de login, falha, renovação e logout são append-only e não guardam senha ou token.
+
+O frontend não usa mais `/auth/dev-token`, Bearer no JavaScript ou armazenamento local. Ele consulta `/auth/me`, renova a sessão uma vez após 401 e apresenta a identidade real do banco.
 
 ## Fluxo obrigatório para produção
 
@@ -26,20 +28,14 @@ sequenceDiagram
     A->>D: gira token e invalida o anterior
 ```
 
-## Requisitos da próxima fatia
+## Controles e evoluções
 
-- senha com Argon2id e parâmetros versionados;
-- access token de curta duração;
-- refresh token aleatório, armazenado somente como hash e rotacionado a cada uso;
-- detecção de reutilização com revogação da família de tokens;
-- cookie `HttpOnly`, `Secure` e `SameSite` para o cliente web;
-- limite específico por conta e origem em login, MFA e recuperação;
-- atraso e bloqueio progressivos sem permitir enumeração de usuário;
+- cookie `Secure` é obrigatório em produção e fica desligado somente no localhost HTTP;
 - MFA com TOTP ou WebAuthn para administrador e financeiro;
 - códigos de recuperação armazenados como hash;
 - recuperação de senha com token único, escopo restrito e expiração curta;
-- encerramento de sessão individual ou de todas as sessões;
-- auditoria de login, falha, renovação, logout, bloqueio e mudança de privilégios;
+- encerramento de todas as sessões e gestão visual de dispositivos;
+- auditoria adicional de bloqueio, recuperação e mudança de privilégios;
 - invalidação das sessões após troca de senha ou suspensão do usuário;
 - nenhuma senha, token, cookie ou chave em logs e eventos de auditoria.
 

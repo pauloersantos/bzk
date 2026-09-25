@@ -1,33 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3100/api/v1";
-let token: string | undefined;
+const API_URL=process.env.NEXT_PUBLIC_API_URL??"http://localhost:3100/api/v1";
+let refreshPromise:Promise<boolean>|null=null;
 
-async function getToken() {
-  if (token) return token;
-  const response = await fetch(`${API_URL}/auth/dev-token`, { method: "POST" });
-  if (!response.ok) throw new Error("Não foi possível autenticar no ambiente local.");
-  token = (await response.json() as { accessToken: string }).accessToken;
-  return token;
-}
+function csrfToken(){if(typeof document==="undefined")return"";return decodeURIComponent(document.cookie.split("; ").find(x=>x.startsWith("bzk_csrf="))?.split("=").slice(1).join("=")??"")}
+async function errorMessage(response:Response){const body=await response.json().catch(()=>({})) as {detail?:string;message?:string|string[];title?:string};return Array.isArray(body.message)?body.message.join("; "):body.detail??body.message??body.title??`Falha na operação (${response.status}).`}
+async function refresh(){if(refreshPromise)return refreshPromise;refreshPromise=(async()=>{const token=csrfToken();const response=await fetch(`${API_URL}/auth/refresh`,{method:"POST",credentials:"include",headers:token?{"X-CSRF-Token":token}:{}});return response.ok})().finally(()=>{refreshPromise=null});return refreshPromise}
 
-export async function api<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
-  const accessToken = await getToken();
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: { ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }), Authorization: `Bearer ${accessToken}`, ...init.headers },
-  });
-  if (response.status === 401 && retry) { token = undefined; return api<T>(path, init, false); }
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as { detail?: string; message?: string | string[]; title?: string };
-    const message = Array.isArray(body.message) ? body.message.join("; ") : body.detail ?? body.message ?? body.title;
-    throw new Error(message || `Falha na operação (${response.status}).`);
-  }
-  return response.status === 204 ? undefined as T : response.json() as Promise<T>;
-}
+export async function api<T>(path:string,init:RequestInit={},retry=true):Promise<T>{const method=(init.method??"GET").toUpperCase(),form=init.body instanceof FormData,csrf=!['GET','HEAD','OPTIONS'].includes(method)?csrfToken():"";const response=await fetch(`${API_URL}${path}`,{...init,credentials:"include",headers:{...(form?{}:{"Content-Type":"application/json"}),...(csrf?{"X-CSRF-Token":csrf}:{}),...init.headers}});if(response.status===401&&retry&&!path.startsWith('/auth/')){if(await refresh())return api<T>(path,init,false);if(typeof window!=="undefined")window.dispatchEvent(new Event("bomzeika:session-expired"))}if(!response.ok)throw new Error(await errorMessage(response));return response.status===204?undefined as T:response.json() as Promise<T>}
 
-export async function apiBlob(path: string, retry = true): Promise<Blob> {
-  const accessToken = await getToken();
-  const response = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (response.status === 401 && retry) { token = undefined; return apiBlob(path, false); }
-  if (!response.ok) throw new Error(`Não foi possível carregar a imagem (${response.status}).`);
-  return response.blob();
-}
+export async function apiBlob(path:string,retry=true):Promise<Blob>{const response=await fetch(`${API_URL}${path}`,{credentials:"include"});if(response.status===401&&retry&&await refresh())return apiBlob(path,false);if(!response.ok)throw new Error(await errorMessage(response));return response.blob()}
