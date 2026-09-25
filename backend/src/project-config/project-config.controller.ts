@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { CurrentUser } from '../common/auth/current-user.decorator';
@@ -7,6 +7,7 @@ import { AssignServiceDto } from './dto/assign-service.dto';
 import { AssignStageDto } from './dto/assign-stage.dto';
 import { CreateDependencyDto } from './dto/create-dependency.dto';
 import { ProjectConfigService } from './project-config.service';
+import { AssignStageBatchDto } from './dto/assign-stage-batch.dto';
 
 @ApiTags('Configuração da obra')
 @ApiBearerAuth()
@@ -29,6 +30,14 @@ export class ProjectConfigController {
   addStage(@Param('projectId', ParseUUIDPipe) projectId: string, @Body() input: AssignStageDto, @CurrentUser() user: AuthenticatedUser, @Req() request: Request & { requestId?: string }) {
     return this.configService.addStage(this.context(user, request), projectId, input);
   }
+
+  @Post('stages/batch')
+  @ApiOperation({summary:'Inclui etapas e subetapas selecionadas em uma única transação'})
+  addStages(@Param('projectId',ParseUUIDPipe) projectId:string,@Body() input:AssignStageBatchDto,@CurrentUser() user:AuthenticatedUser,@Req() request:Request&{requestId?:string}){return this.configService.addStages(this.context(user,request),projectId,input);}
+
+  @Delete('stages/:projectStageId')
+  @ApiOperation({summary:'Remove uma etapa da configuração e suas subetapas vinculadas'})
+  removeStage(@Param('projectId',ParseUUIDPipe) projectId:string,@Param('projectStageId',ParseUUIDPipe) projectStageId:string,@CurrentUser() user:AuthenticatedUser,@Req() request:Request&{requestId?:string}){return this.configService.removeStageStructure(this.context(user,request),projectId,projectStageId);}
 
   @Post('services')
   @ApiOperation({ summary: 'Inclui serviço com fornecedor obrigatório' })
