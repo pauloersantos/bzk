@@ -13,7 +13,7 @@ export async function api<T>(path: string, init: RequestInit = {}, retry = true)
   const accessToken = await getToken();
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}`, ...init.headers },
+    headers: { ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }), Authorization: `Bearer ${accessToken}`, ...init.headers },
   });
   if (response.status === 401 && retry) { token = undefined; return api<T>(path, init, false); }
   if (!response.ok) {
@@ -22,4 +22,12 @@ export async function api<T>(path: string, init: RequestInit = {}, retry = true)
     throw new Error(message || `Falha na operação (${response.status}).`);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
+}
+
+export async function apiBlob(path: string, retry = true): Promise<Blob> {
+  const accessToken = await getToken();
+  const response = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (response.status === 401 && retry) { token = undefined; return apiBlob(path, false); }
+  if (!response.ok) throw new Error(`Não foi possível carregar a imagem (${response.status}).`);
+  return response.blob();
 }

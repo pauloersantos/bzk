@@ -4,8 +4,9 @@ import { FileText, Landmark, Plus, Settings2, FileSignature } from "lucide-react
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Heading } from "./preobra-managers";
+import { BannerProject, ProjectBanner } from "./project-banner";
 
-type Project={id:string;name:string;status:string};
+type Project=BannerProject;
 type Stage={id:string;name:string;code:string;status:string};
 type Supplier={id:string;legalName:string;tradeName?:string;status:string};
 type ConfigStage={id:string;catalogStageId:string;name:string;displayOrder:number;plannedStart:string;plannedEnd:string;physicalWeight:string;status:string};
@@ -19,7 +20,7 @@ const readLocal=(projectId:string,kind:RecordKind):LocalRecord[]=>{if(!projectId
 function ProjectGate({children}:{children:(projectId:string,projects:Project[])=>ReactNode}){
  const [projects,setProjects]=useState<Project[]>([]),[projectId,setProjectId]=useState(""),[error,setError]=useState("");
  useEffect(()=>{const task=setTimeout(()=>void api<Project[]>("/projects").then(rows=>{setProjects(rows.filter(x=>x.status!=="cancelled"));setProjectId(current=>current||rows.find(x=>x.status!=="cancelled")?.id||"")}).catch(e=>setError((e as Error).message)),0);return()=>clearTimeout(task)},[]);
- return <>{error&&<p className="form-error">{error}</p>}<div className="project-gate"><label>Obra<select value={projectId} onChange={e=>setProjectId(e.target.value)}><option value="">Selecione uma obra cadastrada</option>{projects.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><span>{projectId?"Contexto carregado":"Cadastre ou selecione uma obra para continuar"}</span></div>{projectId?children(projectId,projects):<div className="state-box">Nenhuma obra selecionada.</div>}</>
+ return <>{error&&<p className="form-error">{error}</p>}<ProjectBanner projects={projects} projectId={projectId} onChange={setProjectId}/>{projectId?children(projectId,projects):<div className="state-box">Nenhuma obra selecionada.</div>}</>
 }
 
 export function ProjectConfiguration(){return <><Heading eyebrow="Cadastro da obra" title="Configurações da obra" description="Selecione etapas do catálogo e configure fornecedor, período e peso para cada obra."/><ProjectGate>{projectId=><ConfigurationBody projectId={projectId}/>}</ProjectGate></>}

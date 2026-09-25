@@ -1,15 +1,16 @@
 "use client";
 
-import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, ChevronDown, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, ShieldCheck, Store, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, CalendarDays, CheckCircle2, CircleDollarSign, ClipboardCheck, HardHat, LayoutDashboard, Menu, ShieldCheck, Store, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
 import { Contracts, InitialBudget, ProjectConfiguration, ProjectDocuments } from "./project-registration";
 import { ExecutionKind, ExecutionWorkspace } from "./execution-workspace";
 import { MemorialWorkspace, PostConstructionWorkspace } from "./post-construction-workspace";
+import { BannerProject, ProjectBanner } from "./project-banner";
 
 type ViewId = "dashboard" | "catalog" | "suppliers" | "projects" | "project-config" | "project-documents" | "initial-budget" | "contracts" | "handover" | "sales" | "memorial" | ExecutionKind;
-type ActiveProject={id:string;name:string;address:string;status:string};
+type ActiveProject=BannerProject;
 const stages = [
   { name: "Projetos e aprovações", supplier: "Ateliê Norte Arquitetura", progress: 92, end: "18/10/2026", status: "No prazo" },
   { name: "Fundações e contenções", supplier: "Base Engenharia", progress: 68, end: "12/12/2026", status: "Atenção" },
@@ -43,17 +44,12 @@ export function BomzeikaApp() {
     <div className="app-workspace">
       <header className="topbar">
         <button className="icon-button mobile-only" type="button" aria-label="Abrir menu" onClick={() => setMobileMenu(true)}><Menu size={21} /></button>
-        {view === "dashboard" ? <div className="project-switcher">
-          <label htmlFor="obra-ativa">Obra ativa</label>
-          <div className="select-wrap"><select id="obra-ativa" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Selecione</option>{activeProjects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ChevronDown aria-hidden="true" size={16} /></div>
-          <span className="project-location">{project?.address??"Nenhuma obra ativa"}</span>
-        </div> : null}
         <div className="topbar-actions">
           <div className="user-chip" aria-label="Usuário atual: Paulo, administrador"><span>PS</span><div><strong>Paulo</strong><small>Administrador</small></div></div>
         </div>
       </header>
       <main id="conteudo" className="content" tabIndex={-1}>
-        {view === "dashboard" && (project?<Dashboard projectName={project.name} />:<div className="state-box">Não há obra ativa. Altere o status de uma obra em Cadastro da obra → Obras para liberar a Execução.</div>)}
+        {view === "dashboard" && (project?<Dashboard project={project} projects={activeProjects} projectId={projectId} onChange={setProjectId}/>:<div className="state-box">Não há obra ativa. Altere o status de uma obra em Cadastro da obra → Obras para liberar a Execução.</div>)}
         {view === "catalog" && <CatalogManager query="" />}
         {view === "suppliers" && <SuppliersManager query="" />}
         {view === "projects" && <ProjectsManager query="" />}
@@ -89,14 +85,14 @@ function PageHeading({ eyebrow, title, description, action }: { eyebrow: string;
   return <div className="page-heading"><div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{action}</div>;
 }
 
-function Dashboard({ projectName }: { projectName: string }) {
+function Dashboard({project,projects,projectId,onChange}:{project:ActiveProject;projects:ActiveProject[];projectId:string;onChange:(id:string)=>void}) {
   const metrics = [
     { label: "Orçamento aprovado", value: money.format(12_500_000), note: "Base vigente", tone: "navy" },
     { label: "Contratado", value: money.format(7_840_000), note: "62,7% do orçamento", tone: "blue" },
     { label: "Executado", value: money.format(3_215_000), note: "25,7% reconhecido", tone: "cyan" },
     { label: "Pago", value: money.format(2_760_000), note: "Saldo: R$ 455 mil", tone: "slate" },
   ];
-  return <><PageHeading eyebrow="Visão executiva" title={projectName} description="Acompanhe custo, avanço físico e riscos na mesma data de corte." action={<div className="date-chip"><CalendarDays size={16} /> 23/09/2026</div>} />
+  return <><ProjectBanner projects={projects} projectId={projectId} onChange={onChange} activeOnly/><PageHeading eyebrow="Visão executiva" title={project.name} description="Acompanhe custo, avanço físico e riscos na mesma data de corte." action={<div className="date-chip"><CalendarDays size={16} /> 23/09/2026</div>} />
     <section className="metric-grid" aria-label="Indicadores financeiros">{metrics.map((metric) => <article className={`metric-card metric-${metric.tone}`} key={metric.label}><p>{metric.label}</p><strong>{metric.value}</strong><span>{metric.note}</span></article>)}</section>
     <section className="dashboard-grid">
       <article className="panel progress-panel"><div className="panel-heading"><div><span>Avanço ponderado</span><h2>Progresso por etapa</h2></div><strong>38,4%</strong></div><div className="stage-bars">{stages.map((stage) => <div key={stage.name}><div><span>{stage.name}</span><b>{stage.progress}%</b></div><div className="progress-track"><span style={{ width: `${stage.progress}%` }} /></div></div>)}</div></article>
