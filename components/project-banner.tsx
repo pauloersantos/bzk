@@ -7,9 +7,9 @@ import { apiBlob } from "@/lib/api";
 export type BannerProject={id:string;name:string;address?:string;status:string;hasMainImage?:boolean;mainImageVersion?:number|string|null};
 
 function useProjectImage(project:BannerProject|undefined) {
-  const [imageUrl,setImageUrl]=useState("");
-  useEffect(()=>{let objectUrl="",cancelled=false;setImageUrl("");if(!project?.hasMainImage)return;void apiBlob(`/projects/${project.id}/main-image`).then(blob=>{if(cancelled||!blob.type.startsWith("image/"))return;objectUrl=URL.createObjectURL(blob);setImageUrl(objectUrl)}).catch(()=>undefined);return()=>{cancelled=true;if(objectUrl)URL.revokeObjectURL(objectUrl)}},[project?.id,project?.hasMainImage,project?.mainImageVersion]);
-  return imageUrl;
+  const [loaded,setLoaded]=useState<{projectId:string;url:string}|null>(null);
+  useEffect(()=>{let objectUrl="",cancelled=false;if(!project?.hasMainImage)return;void apiBlob(`/projects/${project.id}/main-image`).then(blob=>{if(cancelled||!blob.type.startsWith("image/"))return;objectUrl=URL.createObjectURL(blob);setLoaded({projectId:project.id,url:objectUrl})}).catch(()=>undefined);return()=>{cancelled=true;if(objectUrl)URL.revokeObjectURL(objectUrl)}},[project?.id,project?.hasMainImage,project?.mainImageVersion]);
+  return loaded?.projectId===project?.id?(loaded?.url??""):"";
 }
 
 export function ProjectCover({project}:{project:BannerProject}) {

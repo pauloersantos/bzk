@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { CatalogManager, ProjectsManager, SuppliersManager } from "./preobra-managers";
 import { Contracts, InitialBudget, ProjectConfiguration, ProjectDocuments } from "./project-registration";
 import { ExecutionKind, ExecutionWorkspace } from "./execution-workspace";
+import { ScheduleWorkspace } from "./schedule-workspace";
 import { MemorialWorkspace, PostConstructionWorkspace } from "./post-construction-workspace";
 import { BannerProject, ProjectBanner } from "./project-banner";
 
@@ -62,7 +63,7 @@ export function BomzeikaApp({user,organizationName,onLogout}:{user:{name:string;
         {view === "purchases" && <ExecutionWorkspace kind="purchases" />}
         {view === "payments" && <ExecutionWorkspace kind="payments" />}
         {view === "finance" && <ExecutionWorkspace kind="finance" />}
-        {view === "schedule" && <ExecutionWorkspace kind="schedule" />}
+          {view === "schedule" && <ScheduleWorkspace />}
         {view === "diary" && <ExecutionWorkspace kind="diary" />}
         {view === "handover" && <PostConstructionWorkspace kind="handover" />}
         {view === "sales" && <PostConstructionWorkspace kind="sales" />}
