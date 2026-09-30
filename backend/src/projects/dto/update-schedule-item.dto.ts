@@ -1,8 +1,9 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min } from 'class-validator';
 
 export class UpdateScheduleItemDto {
   @IsOptional() @IsString() @Length(3,180) name?:string;
+  @IsOptional() @IsUUID() supplierId?:string;
   @IsOptional() @IsDateString() plannedStart?:string;
   @IsOptional() @IsDateString() plannedEnd?:string;
   @IsOptional() @IsIn(['planned','released','blocked','in_progress','completed','suspended','cancelled']) status?:string;

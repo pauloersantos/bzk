@@ -63,7 +63,7 @@ export function BomzeikaApp({user,organizationName,onLogout}:{user:{name:string;
         {view === "purchases" && <ExecutionWorkspace kind="purchases" />}
         {view === "payments" && <ExecutionWorkspace kind="payments" />}
         {view === "finance" && <ExecutionWorkspace kind="finance" />}
-          {view === "schedule" && <ScheduleWorkspace />}
+        {view === "schedule" && <ScheduleWorkspace onConfigure={()=>navigate("project-config")} />}
         {view === "diary" && <ExecutionWorkspace kind="diary" />}
         {view === "handover" && <PostConstructionWorkspace kind="handover" />}
         {view === "sales" && <PostConstructionWorkspace kind="sales" />}
