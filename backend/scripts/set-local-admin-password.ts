@@ -1,0 +1,7 @@
+import * as argon2 from 'argon2';
+import { Client } from 'pg';
+import { loadSecureEnvironment } from '../src/config/secure-env';
+import { validateEnvironment } from '../src/config/env.schema';
+
+async function main(){loadSecureEnvironment();const env=validateEnvironment(process.env);if(env.NODE_ENV==='production')throw new Error('Operação bloqueada em produção');const password=process.env.LOCAL_ADMIN_PASSWORD;if(!password||password.length<12||password.length>128)throw new Error('Defina LOCAL_ADMIN_PASSWORD com 12 a 128 caracteres');if(!env.DEV_USER_ID)throw new Error('DEV_USER_ID não configurado');const hash=await argon2.hash(password,{type:argon2.argon2id,memoryCost:65536,timeCost:3,parallelism:1});const client=new Client({connectionString:env.DATABASE_URL,application_name:'bomzeika-local-password'});await client.connect();try{await client.query(`insert into app.user_credentials(user_id,password_hash,must_change_password) values($1,$2,false) on conflict(user_id) do update set password_hash=excluded.password_hash,password_changed_at=clock_timestamp(),failed_attempts=0,locked_until=null,must_change_password=false,auth_version=app.user_credentials.auth_version+1,updated_at=clock_timestamp()`,[env.DEV_USER_ID,hash]);await client.query(`update app.auth_sessions set revoked_at=clock_timestamp(),revoke_reason='password_reset' where user_id=$1 and revoked_at is null`,[env.DEV_USER_ID]);console.log('Senha local definida; sessões anteriores foram revogadas.');}finally{await client.end();}}
+void main();

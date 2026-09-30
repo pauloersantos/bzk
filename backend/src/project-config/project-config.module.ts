@@ -1,0 +1,1 @@
+import { Module } from '@nestjs/common'; import { ProjectConfigController } from './project-config.controller'; import { ProjectConfigService } from './project-config.service'; @Module({controllers:[ProjectConfigController],providers:[ProjectConfigService]}) export class ProjectConfigModule{}
